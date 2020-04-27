@@ -1,7 +1,5 @@
 # stm32tfg
 Repositorio para TFG 
-# stm32tfg
-Repositorio para TFG 
 
 1 - Registrarse en https://os.mbed.com/ y seleccionar el tipo de placa que tenemos
 
