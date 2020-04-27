@@ -2,7 +2,7 @@
 #include "USBSerial.h"
 
 
-Serial pcDebug(USBTX,USBRX,115200);
+Serial pcDebug(USBTX,USBRX);
 USBSerial usbSerial;
 
 
