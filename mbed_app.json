@@ -1,7 +1,8 @@
 {
     "target_overrides": {
         "*": {
-            "target.device_has_add": ["USBDEVICE"]
+            "target.device_has_add": ["USBDEVICE"],
+            "platform.stdio-baud-rate":115200
         }
     }
 }
