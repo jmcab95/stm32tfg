@@ -6,6 +6,7 @@ from protobuf import messagesPrueba_pb2
 from time import sleep
 
 
+
 def SerialConn():
     port = '/dev/ttyACM1'
     baudrate = 9600
@@ -40,7 +41,6 @@ def ConsoleFill(messages):
     
 #port= '/dev/ttyACM1'
 
-
 messages = messagesPrueba_pb2.MensajePruebasPySTM()
 
 messages.digitalPin=564
@@ -53,37 +53,36 @@ flag = 0xaa
 final= 0xba
 
 message_bytes = messages.SerializeToString()
-
 flag_bytes=bytes([flag])
 final_flag_bytes=bytes([final])
 length_bytes=bytes([len(message_bytes)])
 
-
-
-
-
 conn = SerialConn()
 
-
+buf=bytearray()
 while True:
-    print("Mandamos cabeceras")
-    conn.write(flag_bytes)
-    print("Mandamos cabeceras 2")
-    conn.write(flag_bytes)
-    print("Mandamos longitud")
-    conn.write(length_bytes)
-    print("Mandamos mensaje")
-    conn.write(message_bytes)
-    print("Mandamos cabecera final")
-    conn.write(final_flag_bytes)
-
-
-    
-            
-       
-
-
-
-    
-    
-
+    i = 0;
+    if conn.readable():
+        if conn.read() == b'\xaa':
+            if conn.read() == b'\xaa':
+                length_message = conn.read()
+                temp = conn.read()
+                while temp!= b'\xba' and i<length_message[0] :
+                    buf+=temp
+                    i = i + 1
+                    temp = conn.read()                    
+                array = bytearray(buf)
+                messages.ParseFromString(array)
+                print(messages.codigo)
+    else:
+        print("Enviamos mensajes")
+        print("Mandamos cabeceras")
+        conn.write(flag_bytes)
+        print("Mandamos cabeceras 2")
+        conn.write(flag_bytes)
+        print("Mandamos longitud")
+        conn.write(length_bytes)
+        print("Mandamos mensaje")
+        conn.write(message_bytes)
+        print("Mandamos cabecera final")
+        conn.write(final_flag_bytes)
