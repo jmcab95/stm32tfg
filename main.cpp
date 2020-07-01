@@ -1,87 +1,199 @@
 #include "USBSerial.h"
 #include "drivers/USBHID.h"
 #include "mbed.h"
-#include "nanopb_library/messagesPrueba.pb.h"
+#include "nanopb_library/TransmissionMessages.pb.h"
 #include "nanopb_library/pb_common.h"
 #include "nanopb_library/pb_decode.h"
 #include "nanopb_library/pb_encode.h"
+#include "platform/mbed_assert.h"
+#include "platform/mbed_debug.h"
+#include "platform/mbed_error.h"
+#include "platform/mbed_stats.h"
 
+// Functions
+int state_machine();
+int pb_decode_machine(int c);
+int pb_encode_machine(int c);
+
+// Variables
+mbed_stats_sys_t statsSys;
 Serial pcDebug(USBTX, USBRX);
 USBSerial usbSerial;
-MensajePruebasPySTM mensajePrueba;
-size_t message_length = 128;
-bool status;
-char flag_inicio = 0xaa;
-char flag_final = 0xba;
 
+IOControl ioControl;
+Stats statsMessage;
+pb_istream_t streamIn;
+pb_ostream_t streamOut;
+uint8_t buf[256];
+size_t message_length;
+DigitalOut digitalLed(LED1);
+InterruptIn buttonUser(USER_BUTTON);
+int version_os;
+char temp;
+bool statusPb;
+char SOH = 0xaa;
+char initialFlag = 0xab;
+char finalEOF = 0xac;
+int messageType;
+int countMess = 0;
+int state = 0;
+int counter;
 // main() runs in its own thread in the OS
 int main() {
 
-  char temp;
-
   while (1) {
-
-    int i = 0;
-    if (usbSerial.readable()) {
-
-      if ((temp = usbSerial.getc()) == 0xaa) {
-        // pcDebug.printf("Entra en primer flag");
-        if ((temp = usbSerial.getc()) == 0xaa) {
-          // pcDebug.printf("Entra en segundo flag");
-          // Segundo flag
-          temp = usbSerial.getc();
-          // pcDebug.printf("Valor lenght leido: %d",temp);
-          message_length = temp;
-          uint8_t buf[message_length];
-
-          while (((temp = usbSerial.getc()) != 0xba) and (i < message_length)) {
-            // pcDebug.printf("Valor actual %02X", temp);
-            buf[i] = temp;
-            i++;
-          }
-
-          pb_istream_t stream = pb_istream_from_buffer(buf, message_length);
-          status =
-              pb_decode(&stream, MensajePruebasPySTM_fields, &mensajePrueba);
-
-          if (!status) {
-            pcDebug.printf("Decoding failed %s\n", PB_GET_ERROR(&stream));
-            return 1;
-          }
-
-          pcDebug.printf("el msg del parametro es %d",
-                         mensajePrueba.digitalPin);
-        }
-      }
-    } else {
-      // Enviamos un mensaje protobuffer
-      // Modificamos
-      mensajePrueba.digitalPin = 564;
-      mensajePrueba.analogPin = 987;
-      mensajePrueba.codigo = 125;
-      message_length = sizeof(mensajePrueba);
-      uint8_t buf[message_length];
-      pb_ostream_t stream = pb_ostream_from_buffer(buf, sizeof(buf));
-
-      status = pb_encode(&stream, MensajePruebasPySTM_fields, &mensajePrueba);
-      message_length = stream.bytes_written;
-
-      if (!status) {
-        pcDebug.printf("Encoding failed %s\n", PB_GET_ERROR(&stream));
-        return 1;
-      } else {
-        // si esta bien encodeado mandamos cabeceras, longitud, mensaje y flag
-        // de cierre
-
-        usbSerial.putc(flag_inicio);
-        usbSerial.putc(flag_inicio);
-        usbSerial.putc(message_length);
-        for (i = 0; i < message_length; i++) {
-          pcDebug.printf("-- %d --", buf[i]);
-          usbSerial.putc(buf[i]);
-        }
-        usbSerial.putc(flag_final);
-      }
-    }
+    state_machine();
   }
+}
+
+int state_machine() {
+
+  switch (state) {
+  case 0:
+    if (usbSerial.readable())
+      state = 1;
+    else
+      state = 0;
+    break;
+  case 1:
+    if (usbSerial.getc() == SOH) {
+      state = 2;
+    } else
+      state = 0;
+    break;
+  case 2:
+    if (usbSerial.getc() == initialFlag) {
+      state = 3;
+    } else
+      state = 0;
+    break;
+  case 3:
+    state = 4;
+    message_length = usbSerial.getc();
+    break;
+  case 4:
+    state = 5;
+    messageType = int(usbSerial.getc());
+    break;
+
+  case 5:
+    while (((temp = usbSerial.getc()) != finalEOF) and
+           countMess < message_length) {
+      buf[countMess] = temp;
+      countMess++;
+    }
+    countMess = 0;
+    state = 6;
+    break;
+  case 6:
+    pb_decode_machine(messageType);
+    state = 7;
+    break;
+  case 7:
+    pb_encode_machine(messageType);
+    state = 0;
+    break;
+  }
+  return 1;
+}
+
+int pb_decode_machine(int c) { // unmarshalling
+  switch (c) {
+  case 1:
+    streamIn = pb_istream_from_buffer(buf, message_length);
+    statusPb = pb_decode(&streamIn, IOControl_fields, &ioControl);
+
+    if (!statusPb) {
+      pcDebug.printf("Decoding failed %s\n", PB_GET_ERROR(&streamIn));
+      ioControl.checkResponse = IOControl_CheckResponse_NONSUCCESSFULLY;
+    }
+
+
+    if (ioControl.typeOfControl == 1) {
+      ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
+    } else if (ioControl.typeOfControl == 2) {
+      pcDebug.printf("Enciendo Led/Apago Led");
+      if (digitalLed.read() == 0)
+        digitalLed.write(1);
+      else
+        digitalLed.write(0);
+      ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
+    } else if (ioControl.typeOfControl == 3) {
+      pcDebug.printf("Lectura entrada analógica");
+      ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
+    } else if (ioControl.typeOfControl == 4) {
+      pcDebug.printf("Lectura entrada digital");
+      ioControl.digitalPin= digitalLed.read();
+      ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
+    }
+    
+
+    break;
+
+  case 2:
+    streamIn = pb_istream_from_buffer(buf, message_length);
+    statusPb = pb_decode(&streamIn, Stats_fields, &statsMessage);
+
+    if (!statusPb) {
+      pcDebug.printf("Decoding failed %s\n", PB_GET_ERROR(&streamIn));
+    }
+    
+    mbed_stats_sys_get(&statsSys);
+    
+    statsMessage.cpuId = statsSys.compiler_id;
+    //statsMessage.mbedVersion=statsSys.cpu_id;
+    break;
+  }
+  return 1;
+}
+
+int pb_encode_machine(int c) { // marshalling
+  switch (c) {
+  case 1:
+    message_length = sizeof(ioControl);
+    streamOut = pb_ostream_from_buffer(buf, message_length);
+
+    statusPb =
+        pb_encode(&streamOut, IOControl_fields, &ioControl);
+    message_length = streamOut.bytes_written;
+
+    if (!statusPb) {
+      pcDebug.printf("Encoding failed %s\n", PB_GET_ERROR(&streamOut));
+    } else {
+      usbSerial.putc(SOH);
+      usbSerial.putc(initialFlag);
+      usbSerial.putc(message_length);
+      for (countMess = 0; countMess < message_length; countMess++) {
+        usbSerial.putc(buf[countMess]);
+      }
+      usbSerial.putc(finalEOF);
+    }
+
+    countMess = 0;
+    break;
+  
+  case 2:
+    message_length = sizeof(statsMessage);
+    streamOut = pb_ostream_from_buffer(buf, message_length);
+
+    statusPb =
+        pb_encode(&streamOut, Stats_fields, &statsMessage);
+    message_length = streamOut.bytes_written;
+
+    if (!statusPb) {
+      pcDebug.printf("Encoding failed %s\n", PB_GET_ERROR(&streamOut));
+    } else {
+      usbSerial.putc(SOH);
+      usbSerial.putc(initialFlag);
+      usbSerial.putc(message_length);
+      for (countMess = 0; countMess < message_length; countMess++) {
+        usbSerial.putc(buf[countMess]);
+      }
+      usbSerial.putc(finalEOF);
+    }
+
+    countMess = 0;
+    break;
+  }
+  return 1;
 }
