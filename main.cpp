@@ -141,7 +141,7 @@ int pb_decode_machine(int c) { // unmarshalling
     mbed_stats_sys_get(&statsSys);
     
     statsMessage.cpuId = statsSys.compiler_id;
-    //statsMessage.mbedVersion=statsSys.cpu_id;
+    statsMessage.mbedVersion=statsSys.os_version;
     break;
   }
   return 1;

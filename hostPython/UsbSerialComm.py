@@ -150,3 +150,4 @@ while flag:
         flag = False
 
 print("\n---Cerrando consola---\n")
+conn.close()
