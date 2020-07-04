@@ -15,19 +15,21 @@ int state_machine();
 int pb_decode_machine(int c);
 int pb_encode_machine(int c);
 
-// Variables
-mbed_stats_sys_t statsSys;
-Serial pcDebug(USBTX, USBRX);
+// Interfaces
+Serial serialConn(USBTX, USBRX);
 USBSerial usbSerial;
 
+//Protobuffers messages
 IOControl ioControl;
 Stats statsMessage;
+
+//Variables
+mbed_stats_sys_t statsSys;
 pb_istream_t streamIn;
 pb_ostream_t streamOut;
 uint8_t buf[256];
 size_t message_length;
 DigitalOut digitalLed(LED1);
-InterruptIn buttonUser(USER_BUTTON);
 int version_os;
 char temp;
 bool statusPb;
@@ -97,14 +99,14 @@ int state_machine() {
   return 1;
 }
 
-int pb_decode_machine(int c) { // unmarshalling
+int pb_decode_machine(int c) { // deserialize
   switch (c) {
   case 1:
     streamIn = pb_istream_from_buffer(buf, message_length);
     statusPb = pb_decode(&streamIn, IOControl_fields, &ioControl);
 
     if (!statusPb) {
-      pcDebug.printf("Decoding failed %s\n", PB_GET_ERROR(&streamIn));
+      serialConn.printf("Decoding failed %s\n", PB_GET_ERROR(&streamIn));
       ioControl.checkResponse = IOControl_CheckResponse_NONSUCCESSFULLY;
     }
 
@@ -112,17 +114,17 @@ int pb_decode_machine(int c) { // unmarshalling
     if (ioControl.typeOfControl == 1) {
       ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
     } else if (ioControl.typeOfControl == 2) {
-      pcDebug.printf("Enciendo Led/Apago Led");
+      serialConn.printf("Enciendo Led/Apago Led");
       if (digitalLed.read() == 0)
         digitalLed.write(1);
       else
         digitalLed.write(0);
       ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
     } else if (ioControl.typeOfControl == 3) {
-      pcDebug.printf("Lectura entrada analógica");
+      serialConn.printf("Lectura entrada analógica");
       ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
     } else if (ioControl.typeOfControl == 4) {
-      pcDebug.printf("Lectura entrada digital");
+      serialConn.printf("Lectura entrada digital");
       ioControl.digitalPin= digitalLed.read();
       ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
     }
@@ -135,7 +137,7 @@ int pb_decode_machine(int c) { // unmarshalling
     statusPb = pb_decode(&streamIn, Stats_fields, &statsMessage);
 
     if (!statusPb) {
-      pcDebug.printf("Decoding failed %s\n", PB_GET_ERROR(&streamIn));
+      serialConn.printf("Decoding failed %s\n", PB_GET_ERROR(&streamIn));
     }
     
     mbed_stats_sys_get(&statsSys);
@@ -147,7 +149,7 @@ int pb_decode_machine(int c) { // unmarshalling
   return 1;
 }
 
-int pb_encode_machine(int c) { // marshalling
+int pb_encode_machine(int c) { // serialize
   switch (c) {
   case 1:
     message_length = sizeof(ioControl);
@@ -158,7 +160,7 @@ int pb_encode_machine(int c) { // marshalling
     message_length = streamOut.bytes_written;
 
     if (!statusPb) {
-      pcDebug.printf("Encoding failed %s\n", PB_GET_ERROR(&streamOut));
+      serialConn.printf("Encoding failed %s\n", PB_GET_ERROR(&streamOut));
     } else {
       usbSerial.putc(SOH);
       usbSerial.putc(initialFlag);
@@ -181,7 +183,7 @@ int pb_encode_machine(int c) { // marshalling
     message_length = streamOut.bytes_written;
 
     if (!statusPb) {
-      pcDebug.printf("Encoding failed %s\n", PB_GET_ERROR(&streamOut));
+      serialConn.printf("Encoding failed %s\n", PB_GET_ERROR(&streamOut));
     } else {
       usbSerial.putc(SOH);
       usbSerial.putc(initialFlag);

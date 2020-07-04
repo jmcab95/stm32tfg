@@ -105,15 +105,6 @@ while flag:
     flagEOFBytes = bytes([flagEOF])
     lengthBytes = bytes([len(messageBytes)])
     messageTypeControlBytes = bytes([messageTypeControl])
-    # print(len(messageBytes))
-    '''
-    print(messageTypeControlBytes)
-    print(generatedMessage.typeOfControl)
-    print(generatedMessage.digitalPin)
-    print(generatedMessage.analogPin)
-    '''
-
-    # print(generatedMessage.streamBytes)
 
     continueConn = 1
     buf = bytearray()
