@@ -1,5 +1,0 @@
-syntax ="proto2";
-
-message RawData{
-	required string rawcomm[25] = 1;
-}
