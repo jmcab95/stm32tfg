@@ -122,19 +122,19 @@ int pb_decode_machine(int c) { // deserialize
 
     if (ioControl.typeOfControl == 1) {
       ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
-      serialConn.printf("Escritura en pin analógico");
+      serialConn.printf("Writing analog pin");
     } else if (ioControl.typeOfControl == 2) {
-      serialConn.printf("Enciendo Led/Apago Led");
+      serialConn.printf("Writing digital pin");
       if (digitalLed.read() == 0)
         digitalLed.write(1);
       else
         digitalLed.write(0);
       ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
     } else if (ioControl.typeOfControl == 3) {
-      serialConn.printf("Lectura entrada analógica");
+      serialConn.printf("Reading analog pin");
       ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
     } else if (ioControl.typeOfControl == 4) {
-      serialConn.printf("Lectura entrada digital");
+      serialConn.printf("Reading digital pin");
       ioControl.digitalPin = digitalLed.read();
       ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
     }
