@@ -37,6 +37,10 @@ typedef struct _IOControl {
     IOControl_CheckResponse checkResponse;
 } IOControl;
 
+typedef struct _RawData {
+    char rawcomm[128];
+} RawData;
+
 typedef struct _Stats {
     int32_t value;
     bool has_mbedVersion;
@@ -59,14 +63,17 @@ typedef struct _Stats {
 /* Initializer values for message structs */
 #define IOControl_init_default                   {_IOControl_TypeOfControl_MIN, false, 0, false, 0, false, IOControl_CheckResponse_SUCCESSFULLY}
 #define Stats_init_default                       {0, false, 0, false, 0}
+#define RawData_init_default                     {""}
 #define IOControl_init_zero                      {_IOControl_TypeOfControl_MIN, false, 0, false, 0, false, _IOControl_CheckResponse_MIN}
 #define Stats_init_zero                          {0, false, 0, false, 0}
+#define RawData_init_zero                        {""}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define IOControl_typeOfControl_tag              1
 #define IOControl_digitalPin_tag                 2
 #define IOControl_analogPin_tag                  3
 #define IOControl_checkResponse_tag              4
+#define RawData_rawcomm_tag                      1
 #define Stats_value_tag                          1
 #define Stats_mbedVersion_tag                    2
 #define Stats_cpuId_tag                          3
@@ -87,16 +94,24 @@ X(a, STATIC,   OPTIONAL, INT32,    cpuId,             3)
 #define Stats_CALLBACK NULL
 #define Stats_DEFAULT NULL
 
+#define RawData_FIELDLIST(X, a) \
+X(a, STATIC,   REQUIRED, STRING,   rawcomm,           1)
+#define RawData_CALLBACK NULL
+#define RawData_DEFAULT NULL
+
 extern const pb_msgdesc_t IOControl_msg;
 extern const pb_msgdesc_t Stats_msg;
+extern const pb_msgdesc_t RawData_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define IOControl_fields &IOControl_msg
 #define Stats_fields &Stats_msg
+#define RawData_fields &RawData_msg
 
 /* Maximum encoded size of messages (where known) */
 #define IOControl_size                           26
 #define Stats_size                               33
+#define RawData_size                             130
 
 #ifdef __cplusplus
 } /* extern "C" */

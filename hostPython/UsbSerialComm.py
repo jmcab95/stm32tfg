@@ -8,12 +8,14 @@ from time import sleep
 
 def MessageTypeControl():
     inputTypeControl = input(
-        "Choose the kind of message you want to generate ( IOCOntrol , Stats )\n")
+        "Choose the kind of message you want to generate ( IOCOntrol , Stats, RawComm )\n")
     messageType = 0
     if inputTypeControl.lower() == "iocontrol":
         messageType = 1
     elif inputTypeControl.lower() == "stats":
         messageType = 2
+    elif inputTypeControl.lower()=="rawcomm":
+        messageType = 3
 
     return messageType
 
@@ -58,6 +60,9 @@ def GenerateProtobufferMessage(messageTypeControl):
         message.value = int(input("Insert a numeric ID: \n"))
         message.mbedVersion =51510
         message.cpuId=584
+    elif messageTypeControl == 3:
+        message = message.RawData()
+        message.rawcomm = "Raw message send to the board to control peripherals"
     return message
 
 def PrintProtobufferMessage(messageTypeControl,generatedMessage):
@@ -81,12 +86,15 @@ def PrintProtobufferMessage(messageTypeControl,generatedMessage):
         elif(generatedMessage.checkResponse == 1):
             successValue="Response from mbed: SUCCESS"
         print(successValue)
-        
     elif messageTypeControl == 2:
         print("-Mbed Stats-")
         print("Value: ",generatedMessage.value)
         print("Mbed Version: ",generatedMessage.mbedVersion)
         print("CPU ID: ",generatedMessage.cpuId)
+    elif messageTypeControl == 3:
+        print("-Raw Data-")
+        print("RawComm: ",generatedMessage.rawcomm)
+       
 
 
 conn = SerialConn()
@@ -105,7 +113,7 @@ while flag:
     flagEOFBytes = bytes([flagEOF])
     lengthBytes = bytes([len(messageBytes)])
     messageTypeControlBytes = bytes([messageTypeControl])
-
+  
     continueConn = 1
     buf = bytearray()
 
@@ -119,7 +127,7 @@ while flag:
     conn.write(messageBytes)
     conn.write(flagEOFBytes)
     sleep(1)
-    print("\nMessage sent\n")
+    print("Message sent\n")
 
     if conn.readable():
         if conn.read() == b'\xaa':
@@ -132,6 +140,7 @@ while flag:
                     temp = conn.read()
                 array = bytearray(buf)
                 generatedMessage.ParseFromString(array)
+                print("---Response from the board---")
                 PrintProtobufferMessage(messageTypeControl,generatedMessage)
 
     whileContinue = input("\nDo you want to send another instruction: yes / no : \n").lower()

@@ -12,6 +12,9 @@ PB_BIND(IOControl, IOControl, AUTO)
 PB_BIND(Stats, Stats, AUTO)
 
 
+PB_BIND(RawData, RawData, AUTO)
+
+
 
 
 

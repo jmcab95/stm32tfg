@@ -19,11 +19,12 @@ int pb_encode_machine(int c);
 Serial serialConn(USBTX, USBRX);
 USBSerial usbSerial;
 
-//Protobuffers messages
+// Protobuffers messages
 IOControl ioControl;
 Stats statsMessage;
+RawData rawData;
 
-//Variables
+// Variables
 mbed_stats_sys_t statsSys;
 pb_istream_t streamIn;
 pb_ostream_t streamOut;
@@ -40,6 +41,7 @@ int messageType;
 int countMess = 0;
 int state = 0;
 int counter;
+
 // main() runs in its own thread in the OS
 int main() {
 
@@ -71,7 +73,11 @@ int state_machine() {
     break;
   case 3:
     state = 4;
+
     message_length = usbSerial.getc();
+
+    serialConn.printf("%d", message_length);
+
     break;
   case 4:
     state = 5;
@@ -79,8 +85,12 @@ int state_machine() {
     break;
 
   case 5:
+
+    /*while (((temp = usbSerial.getc()) != finalEOF) and
+               countMess < message_length) { */
     while (((temp = usbSerial.getc()) != finalEOF) and
            countMess < message_length) {
+      serialConn.printf("%c", temp);
       buf[countMess] = temp;
       countMess++;
     }
@@ -110,9 +120,9 @@ int pb_decode_machine(int c) { // deserialize
       ioControl.checkResponse = IOControl_CheckResponse_NONSUCCESSFULLY;
     }
 
-
     if (ioControl.typeOfControl == 1) {
       ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
+      serialConn.printf("Escritura en pin analógico");
     } else if (ioControl.typeOfControl == 2) {
       serialConn.printf("Enciendo Led/Apago Led");
       if (digitalLed.read() == 0)
@@ -125,10 +135,9 @@ int pb_decode_machine(int c) { // deserialize
       ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
     } else if (ioControl.typeOfControl == 4) {
       serialConn.printf("Lectura entrada digital");
-      ioControl.digitalPin= digitalLed.read();
+      ioControl.digitalPin = digitalLed.read();
       ioControl.checkResponse = IOControl_CheckResponse_SUCCESSFULLY;
     }
-    
 
     break;
 
@@ -139,11 +148,23 @@ int pb_decode_machine(int c) { // deserialize
     if (!statusPb) {
       serialConn.printf("Decoding failed %s\n", PB_GET_ERROR(&streamIn));
     }
-    
+
     mbed_stats_sys_get(&statsSys);
-    
+
     statsMessage.cpuId = statsSys.compiler_id;
-    statsMessage.mbedVersion=statsSys.os_version;
+    statsMessage.mbedVersion = statsSys.os_version;
+    break;
+
+  case 3:
+    streamIn = pb_istream_from_buffer(buf, message_length);
+    statusPb = pb_decode(&streamIn, RawData_fields, &rawData);
+
+    if (!statusPb) {
+      serialConn.printf("Decoding failed %s\n", PB_GET_ERROR(&streamIn));
+    }
+    
+    strcpy(rawData.rawcomm,"Board answering raw message from PC");
+
     break;
   }
   return 1;
@@ -155,8 +176,7 @@ int pb_encode_machine(int c) { // serialize
     message_length = sizeof(ioControl);
     streamOut = pb_ostream_from_buffer(buf, message_length);
 
-    statusPb =
-        pb_encode(&streamOut, IOControl_fields, &ioControl);
+    statusPb = pb_encode(&streamOut, IOControl_fields, &ioControl);
     message_length = streamOut.bytes_written;
 
     if (!statusPb) {
@@ -173,13 +193,34 @@ int pb_encode_machine(int c) { // serialize
 
     countMess = 0;
     break;
-  
+
   case 2:
     message_length = sizeof(statsMessage);
     streamOut = pb_ostream_from_buffer(buf, message_length);
 
-    statusPb =
-        pb_encode(&streamOut, Stats_fields, &statsMessage);
+    statusPb = pb_encode(&streamOut, Stats_fields, &statsMessage);
+    message_length = streamOut.bytes_written;
+
+    if (!statusPb) {
+      serialConn.printf("Encoding failed %s\n", PB_GET_ERROR(&streamOut));
+    } else {
+      usbSerial.putc(SOH);
+      usbSerial.putc(initialFlag);
+      usbSerial.putc(message_length);
+      for (countMess = 0; countMess < message_length; countMess++) {
+        usbSerial.putc(buf[countMess]);
+      }
+      usbSerial.putc(finalEOF);
+    }
+
+    countMess = 0;
+    break;
+
+  case 3:
+    message_length = sizeof(rawData);
+    streamOut = pb_ostream_from_buffer(buf, message_length);
+
+    statusPb = pb_encode(&streamOut, RawData_fields, &rawData);
     message_length = streamOut.bytes_written;
 
     if (!statusPb) {
@@ -197,5 +238,6 @@ int pb_encode_machine(int c) { // serialize
     countMess = 0;
     break;
   }
+
   return 1;
 }

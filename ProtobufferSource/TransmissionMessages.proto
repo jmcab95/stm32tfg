@@ -1,0 +1,31 @@
+syntax ="proto2";
+
+message IOControl{
+enum TypeOfControl{
+	ANALOGWRITE = 1;
+	DIGITALWRITE = 2;
+	ANALOGREAD= 3;
+	DIGITALREAD = 4;
+}
+enum CheckResponse{
+	NONSUCCESSFULLY = 0;
+	SUCCESSFULLY = 1;
+	
+}
+
+	required TypeOfControl typeOfControl = 1;
+	optional int32 digitalPin= 2;
+	optional int32 analogPin= 3;
+	optional CheckResponse checkResponse = 4[default = SUCCESSFULLY];
+}
+
+message Stats{
+	required int32 value = 1;
+	optional int32 mbedVersion = 2;
+	optional int32 cpuId = 3;
+}
+
+message RawData{
+	required string rawcomm = 1;
+}
+
