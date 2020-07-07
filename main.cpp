@@ -73,11 +73,7 @@ int state_machine() {
     break;
   case 3:
     state = 4;
-
     message_length = usbSerial.getc();
-
-    serialConn.printf("%d", message_length);
-
     break;
   case 4:
     state = 5;

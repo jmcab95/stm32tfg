@@ -62,6 +62,7 @@ def GenerateProtobufferMessage(messageTypeControl):
         message.cpuId=584
     elif messageTypeControl == 3:
         message = message.RawData()
+        print("Generated raw message: Raw message send to the board to control peripherals")
         message.rawcomm = "Raw message send to the board to control peripherals"
     return message
 
@@ -149,5 +150,5 @@ while flag:
     else:
         flag = False
 
-print("\n---Cerrando consola---\n")
+print("\n---Closing console---\n")
 conn.close()
