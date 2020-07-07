@@ -6,3 +6,7 @@ Repositorio para TFG
 2 - Descargar Mbed Studio
 
 3 - Usar https://os.mbed.com/platforms/ST-Nucleo-F411RE/ como referencia. Al final aparece como instalar los drivers de STLink
+
+--------------------------------------------------------------------------------------
+Estructura del Repositorio
+-------------------------------------------------------------------------------------
