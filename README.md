@@ -10,3 +10,10 @@ Repositorio para TFG
 --------------------------------------------------------------------------------------
 Estructura del Repositorio
 -------------------------------------------------------------------------------------
+- ProtobufferSource: Contiene fichero .proto y .options
+
+- hostPython: Contiene Programa de Control y las librerías protobuffers compiladas para Python
+
+- Nanopb_library: Contiene los headers necesarios de nanopb para Mbed y los headers generados desde el .proto para mbed
+
+-main.cpp: funcionalidad de la placa de desarrollo.
