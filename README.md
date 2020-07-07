@@ -16,4 +16,5 @@ Estructura del Repositorio
 
 - Nanopb_library: Contiene los headers necesarios de nanopb para Mbed y los headers generados desde el .proto para mbed
 
--main.cpp: funcionalidad de la placa de desarrollo.
+- main.cpp: funcionalidad de la placa de desarrollo.
+
